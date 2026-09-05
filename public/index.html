@@ -5,73 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VKM CHATS</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            text-align: center; 
-            margin-top: 50px; 
-            background: #121212; 
-            color: white; 
-        }
-        .container {
-            max-width: 400px;
-            margin: auto;
-            padding: 20px;
-        }
-        input { 
-            padding: 12px; 
-            font-size: 16px; 
-            margin: 10px 0; 
-            border-radius: 5px; 
-            border: 1px solid #444; 
-            width: 100%; 
-            background: #222;
-            color: white;
-            box-sizing: border-box;
-        }
-        button { 
-            padding: 12px 20px; 
-            font-size: 16px; 
-            background: #007bff; 
-            color: white; 
-            border: none; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            width: 100%;
-            margin-top: 10px;
-        }
-        button:hover { background: #0056b3; }
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #121212; color: white; }
+        .container { max-width: 400px; margin: auto; padding: 20px; }
+        input { padding: 12px; font-size: 16px; margin: 10px 0; border-radius: 5px; border: 1px solid #444; width: 100%; background: #222; color: white; box-sizing: border-box; }
+        button { padding: 12px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
-
     <div class="container">
         <h2>VKM CHATS</h2>
         <h3>Phone Authentication</h3>
 
-        <!-- Phone Number Section -->
         <div id="phone-section">
-            <p style="font-size: 14px; color: #aaa;">Apna mobile number daalein (jaise +919186377359):</p>
+            <p style="font-size: 14px; color: #aaa;">Apna mobile number daalein (+91 ke sath):</p>
             <input type="text" id="phone-number" placeholder="+919186377359">
             <button id="send-otp-btn">Send OTP</button>
         </div>
 
-        <!-- OTP Section (Hidden Initially) -->
         <div id="otp-section" style="display:none;">
-            <p style="font-size: 14px; color: #aaa;">SMS me aaya 6-digit OTP daalein:</p>
+            <p style="font-size: 14px; color: #aaa;">6-digit OTP daalein:</p>
             <input type="text" id="otp-code" placeholder="123456">
             <button id="verify-otp-btn">Verify OTP</button>
         </div>
 
-        <!-- Firebase reCAPTCHA Container -->
         <div id="recaptcha-container"></div>
     </div>
 
-    <!-- Firebase Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // Aapke Firebase Console ke screenshots se li gayi exact configuration
         const firebaseConfig = {
           apiKey: "AIzaSyDLU5tZX0ihJ5JHswEYs1tqf1MppJooxm9",
           authDomain: "vkmchats.firebaseapp.com",
@@ -84,32 +47,20 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Invisible reCAPTCHA setup
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           'size': 'invisible',
           'callback': (response) => {}
         });
 
-        // Send OTP Button Click Event
         document.getElementById('send-otp-btn').addEventListener('click', () => {
           let phoneNumber = document.getElementById('phone-number').value.trim();
+          if (!phoneNumber) { alert("Kripya phone number daalein!"); return; }
+          if (!phoneNumber.startsWith('+')) { phoneNumber = '+' + phoneNumber; }
 
-          if (!phoneNumber) {
-            alert("Kripya phone number daalein!");
-            return;
-          }
-
-          // Agar user '+' lagana bhool jaye toh automatic laga dega
-          if (!phoneNumber.startsWith('+')) {
-            phoneNumber = '+' + phoneNumber;
-          }
-
-          const appVerifier = window.recaptchaVerifier;
-
-          signInWithPhoneNumber(auth, phoneNumber, appVerifier)
+          signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier)
             .then((confirmationResult) => {
               window.confirmationResult = confirmationResult;
-              alert("OTP SMS successfully bhej diya gaya hai!");
+              alert("OTP SMS bhej diya gaya hai!");
               document.getElementById('phone-section').style.display = 'none';
               document.getElementById('otp-section').style.display = 'block';
             })
@@ -119,25 +70,16 @@
             });
         });
 
-        // Verify OTP Button Click Event
         document.getElementById('verify-otp-btn').addEventListener('click', () => {
           const code = document.getElementById('otp-code').value.trim();
-
-          if (!code) {
-            alert("Kripya OTP daalein!");
-            return;
-          }
+          if (!code) { alert("Kripya OTP daalein!"); return; }
 
           window.confirmationResult.confirm(code).then((result) => {
-            const user = result.user;
-            alert("Login Safal Rahi! User UID: " + user.uid);
-            // Yahan se aap user ko aage chat page par bhej sakte hain
+            alert("Login Safal Rahi! User UID: " + result.user.uid);
           }).catch((error) => {
-            console.error("Invalid OTP:", error);
             alert("Galat OTP daala gaya hai!");
           });
         });
     </script>
 </body>
 </html>
-
