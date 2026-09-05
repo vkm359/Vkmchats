@@ -1,164 +1,109 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VKM Chats</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <title>VKMChats - Login</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #0b141a; color: #e9edef; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .container { width: 100%; max-width: 450px; background: #111b21; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); overflow: hidden; display: flex; flex-direction: column; height: 90vh; }
-        .header { background: #202c33; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; border-bottom: 1px solid #222d34; }
-        .body-section { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; font-size: 16px; box-sizing: border-box; }
-        input { background: #2a3942; color: #fff; }
-        button { background: #00a884; color: #fff; font-weight: bold; cursor: pointer; }
-        button:hover { background: #008f6f; }
-        #chat-section { display: none; flex-direction: column; height: 100%; }
-        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { background: #202c33; padding: 10px; border-radius: 8px; max-width: 80%; word-break: break-word; }
-        .message.my { background: #005c4b; align-self: flex-end; }
-        .chat-input-box { display: flex; padding: 10px; background: #202c33; }
-        .chat-input-box input { margin: 0; flex: 1; }
-        .chat-input-box button { width: 80px; margin-left: 10px; margin: 0; }
-        .system-msg { text-align: center; color: #8696a0; font-size: 12px; margin: 5px 0; }
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #121212; color: white; }
+        input { padding: 10px; font-size: 16px; margin: 10px; border-radius: 5px; border: 1px solid #ccc; width: 250px; }
+        button { padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">VKM Chats</div>
 
-        <!-- AUTH SECTION -->
-        <div id="auth-section" class="body-section">
-            <h3>Phone Verification</h3>
-            <input type="text" id="phone-number" placeholder="Phone (+919876543210)" />
-            <input type="text" id="user-name" placeholder="Aapka Naam" />
-            <button id="send-otp-btn">Send SMS OTP</button>
-            
-            <div id="otp-box" style="display:none; margin-top: 20px;">
-                <input type="text" id="otp-code" placeholder="6-digit OTP enter karein" />
-                <button id="verify-otp-btn">Verify & Login</button>
-            </div>
-            <div id="recaptcha-container"></div>
-        </div>
+    <h2>VKMChats Phone Authentication</h2>
 
-        <!-- CHAT SECTION -->
-        <div id="chat-section">
-            <div class="chat-messages" id="messages-container"></div>
-            <div class="chat-input-box">
-                <input type="text" id="msg-input" placeholder="Message likhein..." />
-                <button id="send-msg-btn">Send</button>
-            </div>
-        </div>
+    <!-- Step 1: Phone Number Section -->
+    <div id="phone-section">
+        <p>Apna mobile number daalein (Country code ke sath, jaise +91):</p>
+        <input type="text" id="phone-number" placeholder="+919876543210"><br>
+        <button id="send-otp-btn">Send OTP</button>
     </div>
 
-    <script>
-        // Real Firebase Config from your project screenshot
+    <!-- Step 2: OTP Section (Initially Hidden) -->
+    <div id="otp-section" style="display:none;">
+        <p>SMS me aaya 6-digit OTP daalein:</p>
+        <input type="text" id="otp-code" placeholder="123456"><br>
+        <button id="verify-otp-btn">Verify OTP</button>
+    </div>
+
+    <!-- Firebase reCAPTCHA container (Yeh zaroori hai!) -->
+    <div id="recaptcha-container"></div>
+
+    <!-- Firebase aur Login ka Logic yahan likha hai -->
+    <script type="module">
+        // Firebase SDK CDN se import karein
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // Apni Firebase Config yahan dalein
         const firebaseConfig = {
-            apiKey: "AIzaSyDLU5lzx0ihJSfHswEYkItef1MopJoozw8",
-            authDomain: "vkmchats.firebaseapp.com",
-            projectId: "vkmchats",
-            storageBucket: "vkmchats.appspot.com",
-            messagingSenderId: "923628112475",
-            appId: "1:923628112475:web:d835bb078149f68e494d7e",
-            measurementId: "G-7MZHQ353X9"
+          apiKey: "Aapki_API_Key",
+          authDomain: "vkmchats.firebaseapp.com",
+          projectId: "vkmchats",
+          storageBucket: "vkmchats.appspot.com",
+          messagingSenderId: "Aapka_Sender_Id",
+          appId: "Aapka_App_Id"
         };
 
-        firebase.initializeApp(firebaseConfig);
+        // Firebase initialize karein
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
 
-        window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-            'size': 'invisible'
+        // reCAPTCHA Verifier setup karein
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'invisible', // Invisible reCAPTCHA
+          'callback': (response) => {
+            // reCAPTCHA verified
+          }
         });
 
-        let currentUserPhone = '';
-        let currentUserName = '';
-
+        // Jab user "Send OTP" button dabaye
         document.getElementById('send-otp-btn').addEventListener('click', () => {
-            const phone = document.getElementById('phone-number').value.trim();
-            currentUserName = document.getElementById('user-name').value.trim()요 || 'VKM Member';
+          const phoneNumber = document.getElementById('phone-number').value;
+          const appVerifier = window.recaptchaVerifier;
 
-            if (!phone.startsWith('+')) {
-                alert('Country code ke sath number likhein (Jaise: +919876543210)');
-                return;
-            }
-            currentUserPhone = phone;
+          if (!phoneNumber) {
+            alert("Kripya phone number daalein!");
+            return;
+          }
 
-            firebase.auth().signInWithPhoneNumber(phone, window.recaptchaVerifier)
-                .then((confirmationResult) => {
-                    window.confirmationResult = confirmationResult;
-                    alert('Real SMS OTP bhej diya gaya hai!');
-                    document.getElementById('send-otp-btn').style.display = 'none';
-                    document.getElementById('phone-number').disabled = true;
-                    document.getElementById('user-name').disabled = true;
-                    document.getElementById('otp-box').style.display = 'block';
-                }).catch((error) => {
-                    alert('Error: ' + error.message);
-                    grecaptcha.reset(window.recaptchaVerifier);
-                });
+          signInWithPhoneNumber(auth, phoneNumber, appVerifier)
+            .then((confirmationResult) => {
+              // SMS successfully bhej diya gaya hai
+              window.confirmationResult = confirmationResult;
+              alert("OTP SMS successfully bhej diya gaya hai!");
+              
+              // Phone section chhupayein aur OTP section dikhayein
+              document.getElementById('phone-section').style.display = 'none';
+              document.getElementById('otp-section').style.display = 'block';
+            })
+            .catch((error) => {
+              console.error("SMS Error:", error);
+              alert("SMS bhejne me error aaya: " + error.message);
+            });
         });
 
+        // Jab user "Verify OTP" button dabaye
         document.getElementById('verify-otp-btn').addEventListener('click', () => {
-            const otp = document.getElementById('otp-code').value.trim();
-            if (otp.length !== 6) {
-                alert('Sahi 6-digit OTP daalein');
-                return;
-            }
+          const code = document.getElementById('otp-code').value;
 
-            window.confirmationResult.confirm(otp).then((result) => {
-                fetch('/api/register-user', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: currentUserPhone, name: currentUserName })
-                }).then(res => res.json()).then(data => {
-                    document.getElementById('auth-section').style.display = 'none';
-                    document.getElementById('chat-section').style.display = 'flex';
-                    initChat(currentUserPhone, currentUserName);
-                });
-            }).catch((error) => {
-                alert('Galat OTP!');
-            });
+          if (!code) {
+            alert("Kripya OTP daalein!");
+            return;
+          }
+
+          window.confirmationResult.confirm(code).then((result) => {
+            const user = result.user;
+            alert("Login Safal Rahi! User UID: " + user.uid);
+            // Yahan par aap user ko chat page par redirect kar sakte hain
+          }).catch((error) => {
+            console.error("Invalid OTP:", error);
+            alert("Galat OTP daala gaya hai!");
+          });
         });
-
-        function initChat(phone, name) {
-            const socket = io();
-            socket.emit('join', { phone, name });
-
-            const msgInput = document.getElementById('msg-input');
-            const sendBtn = document.getElementById('send-msg-btn');
-            const messagesContainer = document.getElementById('messages-container');
-
-            sendBtn.addEventListener('click', () => {
-                const text = msgInput.value.trim();
-                if (text) {
-                    socket.emit('sendMessage', { text });
-                    msgInput.value = '';
-                }
-            });
-
-            msgInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') sendBtn.click();
-            });
-
-            socket.on('receiveMessage', (msg) => {
-                const div = document.createElement('div');
-                div.className = `message ${msg.senderPhone === phone ? 'my' : ''}`;
-                div.innerHTML = `<b>${msg.senderName}</b>: ${msg.text} <span style="font-size:10px; color:#8696a0; float:right; margin-left:10px;">${msg.timestamp}</span>`;
-                messagesContainer.appendChild(div);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            });
-
-            socket.on('systemMessage', (sysMsg) => {
-                const div = document.createElement('div');
-                div.className = 'system-msg';
-                div.innerText = sysMsg;
-                messagesContainer.appendChild(div);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            });
-        }
     </script>
 </body>
-    </html>
-    
+</html>
