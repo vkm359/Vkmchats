@@ -1,9 +1,15 @@
+
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const https = require('https');
+
+// Fast2SMS API Key integrated
+const FAST2SMS_API_KEY = "Nox9TKdhwMPjZXszcbLkFQAqa4uSgyEG6rCR1JUimIYepnD7v00dZ1hI5YPJQMNX7woWmL68kRKsjuDA";
 
 const app = express();
 const server = http.createServer(app);
@@ -36,7 +42,22 @@ app.post('/api/send-otp', (req, res) => {
     saveDB(db);
 
     console.log(`[VKM LOG] OTP for ${phone} is: ${otp}`);
-    res.json({ success: true, message: "Testing OTP Server logs me save ho gaya hai" });
+
+    // Fast2SMS API Call to Send Real Mobile SMS
+    const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
+    const smsUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${FAST2SMS_API_KEY}&variables_values=${otp}&route=otp&numbers=${cleanPhone}`;
+
+    https.get(smsUrl, (apiRes) => {
+        let data = '';
+        apiRes.on('data', (chunk) => data += chunk);
+        apiRes.on('end', () => {
+            console.log(`[VKM SMS Response]: ${data}`);
+        });
+    }).on('error', (err) => {
+        console.error('[VKM SMS Error]:', err.message);
+    });
+
+    res.json({ success: true, message: "OTP aapke mobile number par SMS se bhej diya gaya hai!" });
 });
 
 app.post('/api/verify-otp', (req, res) => {
@@ -86,5 +107,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`VKM Server Running on port ${PORT}`));
-
 
