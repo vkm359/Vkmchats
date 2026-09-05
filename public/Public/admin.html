@@ -1,0 +1,35 @@
+cat << 'EOF' > public/admin.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VKM Owner Control Panel</title>
+    <style>
+        body { font-family: sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; }
+        h1 { color: #38bdf8; }
+        .card { background: #1e293b; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        pre { background: #090d16; padding: 10px; color: #4ade80; border-radius: 5px; overflow-x: auto; }
+        button { background: #38bdf8; border: none; padding: 10px 20px; font-weight: bold; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>VKM Owner Control Panel</h1>
+    <button onclick="loadData()">Fetch Live Data</button>
+    <div class="card">
+        <h3>Full Database Records:</h3>
+        <pre id="dataDisplay">Click button to view</pre>
+    </div>
+<script>
+    async function loadData() {
+        const res = await fetch('/api/owner/data', { headers: { 'x-owner-key': 'vkm@owner123' } });
+        if(res.ok) {
+            const data = await res.json();
+            document.getElementById('dataDisplay').innerText = JSON.stringify(data, null, 2);
+        } else { alert("Access Denied!"); }
+    }
+</script>
+</body>
+</html>
+EOF
+
+  
