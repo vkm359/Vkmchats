@@ -1,0 +1,106 @@
+cat << 'EOF' > public/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VKM Private App</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { background-color: #0b141a; color: #e9edef; display: flex; justify-content: center; height: 100vh; }
+        .app-container { width: 100%; max-width: 480px; height: 100vh; background: #111b21; display: flex; flex-direction: column; }
+        .header { background: #202c33; padding: 12px; display: flex; align-items: center; gap: 12px; }
+        .vkm-logo { width: 40px; height: 40px; background: linear-gradient(135deg, #00a884, #005c4b); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; }
+        .header-title { font-size: 1.1rem; font-weight: 600; }
+        .auth-screen { padding: 30px 20px; display: flex; flex-direction: column; gap: 15px; text-align: center; justify-content: center; height: 100%; }
+        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2a3942; background: #2a3942; color: #fff; outline: none; }
+        button { background: #00a884; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .chat-box { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 80%; padding: 8px 12px; border-radius: 8px; font-size: 0.95rem; }
+        .mine { align-self: flex-end; background: #005c4b; }
+        .others { align-self: flex-start; background: #202c33; }
+        .sender-tag { font-size: 0.7rem; color: #53bdeb; margin-bottom: 3px; font-weight: bold; }
+        .time-tag { font-size: 0.65rem; color: #8696a0; text-align: right; margin-top: 3px; }
+        .input-area { padding: 10px; background: #202c33; display: flex; gap: 10px; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="header">
+        <div class="vkm-logo">VKM</div>
+        <div class="header-title">VKM Private App</div>
+    </div>
+    <div id="authView" class="auth-screen">
+        <h2 style="color: #00a884;">Welcome to VKM</h2>
+        <input type="text" id="phoneInput" placeholder="Mobile Number">
+        <input type="text" id="nameInput" placeholder="Apna Naam">
+        <button onclick="requestOTP()">Send OTP</button>
+        <div id="otpSection" class="hidden">
+            <input type="text" id="otpInput" placeholder="4-Digit OTP" style="margin-top: 10px;">
+            <button onclick="verifyOTP()" style="margin-top: 10px; background: #0284c7;">Verify & Login</button>
+        </div>
+    </div>
+    <div id="chatView" class="chat-box hidden"></div>
+    <div id="inputView" class="input-area hidden">
+        <input type="text" id="messageInput" placeholder="Message likhein...">
+        <button onclick="sendMsg()">Send</button>
+    </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    let userPhone = '', userName = '';
+    async function requestOTP() {
+        userPhone = document.getElementById('phoneInput').value;
+        userName = document.getElementById('nameInput').value;
+        if(!userPhone || !userName) return alert("Details bharo!");
+        const res = await fetch('/api/send-otp', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ phone: userPhone })
+        });
+        const data = await res.json();
+        alert(data.message);
+        document.getElementById('otpSection').classList.remove('hidden');
+    }
+    async function verifyOTP() {
+        const otp = document.getElementById('otpInput').value;
+        const res = await fetch('/api/verify-otp', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ phone: userPhone, otp, name: userName })
+        });
+        const data = await res.json();
+        if(data.success) {
+            document.getElementById('authView').classList.add('hidden');
+            document.getElementById('chatView').classList.remove('hidden');
+            document.getElementById('inputView').classList.remove('hidden');
+            socket.emit('join', { phone: userPhone, name: userName });
+        } else { alert(data.error); }
+    }
+    function sendMsg() {
+        const input = document.getElementById('messageInput');
+        if(input.value.trim()) {
+            socket.emit('sendMessage', { text: input.value });
+            input.value = '';
+        }
+    }
+    socket.on('receiveMessage', (msg) => {
+        const box = document.getElementById('chatView');
+        const isMine = msg.senderPhone === userPhone;
+        const div = document.createElement('div');
+        div.className = `msg ${isMine ? 'mine' : 'others'}`;
+        div.innerHTML = `
+            ${!isMine ? `<div class="sender-tag">${msg.senderName} (${msg.senderPhone})</div>` : ''}
+            <div>${msg.text}</div>
+            <div class="time-tag">${msg.timestamp}</div>
+        `;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    });
+</script>
+</body>
+</html>
+EOF
+          
