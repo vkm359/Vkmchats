@@ -3,44 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VKMChats - Login</title>
+    <title>VKM CHATS</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background: #121212; color: white; }
-        input { padding: 10px; font-size: 16px; margin: 10px; border-radius: 5px; border: 1px solid #ccc; width: 250px; }
-        button { padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            margin-top: 50px; 
+            background: #121212; 
+            color: white; 
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+            padding: 20px;
+        }
+        input { 
+            padding: 12px; 
+            font-size: 16px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            border: 1px solid #444; 
+            width: 100%; 
+            background: #222;
+            color: white;
+            box-sizing: border-box;
+        }
+        button { 
+            padding: 12px 20px; 
+            font-size: 16px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            width: 100%;
+            margin-top: 10px;
+        }
         button:hover { background: #0056b3; }
     </style>
 </head>
 <body>
 
-    <h2>VKMChats Phone Authentication</h2>
+    <div class="container">
+        <h2>VKM CHATS</h2>
+        <h3>Phone Authentication</h3>
 
-    <!-- Step 1: Phone Number Section -->
-    <div id="phone-section">
-        <p>Apna mobile number daalein (Country code ke sath, jaise +91):</p>
-        <input type="text" id="phone-number" placeholder="+919876543210"><br>
-        <button id="send-otp-btn">Send OTP</button>
+        <!-- Phone Number Section -->
+        <div id="phone-section">
+            <p style="font-size: 14px; color: #aaa;">Apna mobile number daalein (jaise +91986377359):</p>
+            <input type="text" id="phone-number" placeholder="+91986377359">
+            <button id="send-otp-btn">Send OTP</button>
+        </div>
+
+        <!-- OTP Section (Hidden Initially) -->
+        <div id="otp-section" style="display:none;">
+            <p style="font-size: 14px; color: #aaa;">SMS me aaya 6-digit OTP daalein:</p>
+            <input type="text" id="otp-code" placeholder="123456">
+            <button id="verify-otp-btn">Verify OTP</button>
+        </div>
+
+        <!-- Firebase reCAPTCHA Container -->
+        <div id="recaptcha-container"></div>
     </div>
 
-    <!-- Step 2: OTP Section (Initially Hidden) -->
-    <div id="otp-section" style="display:none;">
-        <p>SMS me aaya 6-digit OTP daalein:</p>
-        <input type="text" id="otp-code" placeholder="123456"><br>
-        <button id="verify-otp-btn">Verify OTP</button>
-    </div>
-
-    <!-- Firebase reCAPTCHA container (Yeh zaroori hai!) -->
-    <div id="recaptcha-container"></div>
-
-    <!-- Firebase aur Login ka Logic yahan likha hai -->
+    <!-- Firebase Logic -->
     <script type="module">
-        // Firebase SDK CDN se import karein
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // Apni Firebase Config yahan dalein
+        // 🔥 APNI FIREBASE CONFIG YAHAN FIREBASE CONSOLE SE COPY KARKE DALEN 🔥
         const firebaseConfig = {
-          apiKey: "Aapki_API_Key",
+          apiKey: "YAHAN_APNI_REAL_API_KEY_DAALEIN", 
           authDomain: "vkmchats.firebaseapp.com",
           projectId: "vkmchats",
           storageBucket: "vkmchats.appspot.com",
@@ -48,35 +81,35 @@
           appId: "Aapka_App_Id"
         };
 
-        // Firebase initialize karein
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // reCAPTCHA Verifier setup karein
+        // Invisible reCAPTCHA setup
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          'size': 'invisible', // Invisible reCAPTCHA
-          'callback': (response) => {
-            // reCAPTCHA verified
-          }
+          'size': 'invisible',
+          'callback': (response) => {}
         });
 
-        // Jab user "Send OTP" button dabaye
+        // Send OTP Button Click Event
         document.getElementById('send-otp-btn').addEventListener('click', () => {
-          const phoneNumber = document.getElementById('phone-number').value;
-          const appVerifier = window.recaptchaVerifier;
+          let phoneNumber = document.getElementById('phone-number').value.trim();
 
           if (!phoneNumber) {
             alert("Kripya phone number daalein!");
             return;
           }
 
+          // Agar user '+' lagana bhool jaye toh automatic laga dega
+          if (!phoneNumber.startsWith('+')) {
+            phoneNumber = '+' + phoneNumber;
+          }
+
+          const appVerifier = window.recaptchaVerifier;
+
           signInWithPhoneNumber(auth, phoneNumber, appVerifier)
             .then((confirmationResult) => {
-              // SMS successfully bhej diya gaya hai
               window.confirmationResult = confirmationResult;
               alert("OTP SMS successfully bhej diya gaya hai!");
-              
-              // Phone section chhupayein aur OTP section dikhayein
               document.getElementById('phone-section').style.display = 'none';
               document.getElementById('otp-section').style.display = 'block';
             })
@@ -86,9 +119,9 @@
             });
         });
 
-        // Jab user "Verify OTP" button dabaye
+        // Verify OTP Button Click Event
         document.getElementById('verify-otp-btn').addEventListener('click', () => {
-          const code = document.getElementById('otp-code').value;
+          const code = document.getElementById('otp-code').value.trim();
 
           if (!code) {
             alert("Kripya OTP daalein!");
@@ -98,7 +131,7 @@
           window.confirmationResult.confirm(code).then((result) => {
             const user = result.user;
             alert("Login Safal Rahi! User UID: " + user.uid);
-            // Yahan par aap user ko chat page par redirect kar sakte hain
+            // Yahan se aap user ko aage chat page par bhej sakte hain
           }).catch((error) => {
             console.error("Invalid OTP:", error);
             alert("Galat OTP daala gaya hai!");
