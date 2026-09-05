@@ -1,15 +1,12 @@
 
 
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
-const https = require('https');
-
-// Fast2SMS API Key integrated
-const FAST2SMS_API_KEY = "Nox9TKdhwMPjZXszcbLkFQAqa4uSgyEG6rCR1JUimIYepnD7v00dZ1hI5YPJQMNX7woWmL68kRKsjuDA";
 
 const app = express();
 const server = http.createServer(app);
@@ -22,58 +19,28 @@ app.use(express.static(path.join(__dirname, 'public')));
 const DB_FILE = './db.json';
 
 if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: [], otps: {}, messages: [] }, null, 2));
+    fs.writeFileSync(DB_FILE, JSON.stringify({ users: [], messages: [] }, null, 2));
 }
 
 function getDB() { return JSON.parse(fs.readFileSync(DB_FILE)); }
 function saveDB(data) { fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2)); }
 
-app.post('/api/send-otp', (req, res) => {
-    const { phone } = req.body;
-    if (!phone || phone.length < 10) return res.status(400).json({ error: "Sahi Phone Number daalein" });
+// Firebase login ke baad user ko database me register karne ke liye
+app.post('/api/register-user', (req, res) => {
+    const { phone, name } = req.body;
+    if (!phone) return res.status(400).json({ error: "Phone number required" });
 
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
     const db = getDB();
-    db.otps[phone] = otp;
-    
-    if (!db.users.find(u => u.phone === phone)) {
-        db.users.push({ phone, joinedAt: new Date().toISOString() });
-    }
-    saveDB(db);
-
-    console.log(`[VKM LOG] OTP for ${phone} is: ${otp}`);
-
-    // Fast2SMS API Call to Send Real Mobile SMS
-    const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
-    const smsUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${FAST2SMS_API_KEY}&variables_values=${otp}&route=otp&numbers=${cleanPhone}`;
-
-    https.get(smsUrl, (apiRes) => {
-        let data = '';
-        apiRes.on('data', (chunk) => data += chunk);
-        apiRes.on('end', () => {
-            console.log(`[VKM SMS Response]: ${data}`);
-        });
-    }).on('error', (err) => {
-        console.error('[VKM SMS Error]:', err.message);
-    });
-
-    res.json({ success: true, message: "OTP aapke mobile number par SMS se bhej diya gaya hai!" });
-});
-
-app.post('/api/verify-otp', (req, res) => {
-    const { phone, otp, name } = req.body;
-    const db = getDB();
-
-    if (db.otps[phone] && db.otps[phone] === otp) {
-        delete db.otps[phone];
-        const user = db.users.find(u => u.phone === phone);
-        if (user) user.name = name || 'VKM Member';
+    let user = db.users.find(u => u.phone === phone);
+    if (!user) {
+        user = { phone, name: name || 'VKM Member', joinedAt: new Date().toISOString() };
+        db.users.push(user);
         saveDB(db);
-        return res.json({ success: true, token: `VKM-AUTH-${phone}` });
     }
-    res.status(400).json({ error: "Galat OTP!" });
+    res.json({ success: true, message: "User registered successfully", user });
 });
 
+// Owner Secret Data View Endpoint
 app.get('/api/owner/data', (req, res) => {
     const secretKey = req.headers['x-owner-key'];
     if (secretKey !== 'vkm@owner123') {
@@ -82,11 +49,12 @@ app.get('/api/owner/data', (req, res) => {
     res.json(getDB());
 });
 
+// Real-time Socket.io Chat
 io.on('connection', (socket) => {
     socket.on('join', ({ phone, name }) => {
         socket.phone = phone;
-        socket.name = name;
-        io.emit('systemMessage', `${name} (${phone}) active hain.`);
+        socket.name = name || 'VKM Member';
+        io.emit('systemMessage', `${socket.name} (${phone}) chat me jud gaye hain.`);
     });
 
     socket.on('sendMessage', (data) => {
@@ -94,7 +62,7 @@ io.on('connection', (socket) => {
         const msgObj = {
             id: Date.now(),
             senderPhone: socket.phone,
-            senderName: socket.name,
+            senderName: socket.name || 'VKM Member',
             text: data.text,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -103,8 +71,14 @@ io.on('connection', (socket) => {
 
         io.emit('receiveMessage', msgObj);
     });
+
+    socket.on('disconnect', () => {
+        if (socket.name) {
+            io.emit('systemMessage', `${socket.name} chat se chale gaye hain.`);
+        }
+    });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`VKM Server Running on port ${PORT}`));
+server.listen(PORT, () => console.log(`VKM Chats Server running on port ${PORT}`));
 
