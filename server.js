@@ -1,5 +1,3 @@
-mkdir -p public
-cat << 'EOF' > server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -38,7 +36,7 @@ app.post('/api/send-otp', (req, res) => {
     saveDB(db);
 
     console.log(`[VKM LOG] OTP for ${phone} is: ${otp}`);
-    res.json({ success: true, message: "OTP bhej diya gaya hai (Testing OTP Termux screen par dikhega)" });
+    res.json({ success: true, message: "Testing OTP Server logs me save ho gaya hai" });
 });
 
 app.post('/api/verify-otp', (req, res) => {
@@ -87,6 +85,6 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`VKM Server Running: http://localhost:${PORT}`));
-EOF
+server.listen(PORT, () => console.log(`VKM Server Running on port ${PORT}`));
+
 
